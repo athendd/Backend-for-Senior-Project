@@ -2,7 +2,10 @@ from Coordinates_Obtainer import get_coordinates_from_address
 import requests
 
 BASE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-PLACES_API_KEY = "AIzaSyA6Dqu9ss0_gAUSMllyjxouj47bVPZbZeY"
+PLACES_API_KEY = "AIzaSyDe6GsGguP9k4zBNHEE9hzozj2HGFGRPp0"
+
+def find_distance(lat1, lon1, lat2, lon2):
+    pass
 
 def get_places(lat, lon, radius, place_type):
     params = {
@@ -10,13 +13,20 @@ def get_places(lat, lon, radius, place_type):
         'radius': radius,
         'type': place_type,
         'key': PLACES_API_KEY,
+        'fields': ['name', 'distance', 'rating']
     }
              
     response = requests.get(BASE_PLACES_URL, params = params)
     data = response.json()
     
     if data['status'] == 'OK':
-        print(data['results'])
+        for place in data['results']:
+            print(f"Restaurant Name: {place.get('name')}")
+            print(f"Address: {place.get('vicinity')}")
+            print(f"Rating: {place.get('rating')}")
+            location = place['geometry']['location']
+            print(location['lat'])
+            print(location['lng'])
     else:
         print(f"Error fetching places: {data['status']}")
 
@@ -26,15 +36,14 @@ def main():
     lat, lon = get_coordinates_from_address(address)
     
     if lat != None and lon != None:
-        #Search 25 miles nearest to address
-        search_radius = 40234
+        
+        #Search 10 miles nearest to address
+        search_radius = 16093
         local_amenities = [
             'restaurants','parks',
             'grocery stores', 'gyms', 'coffee shops', 'shopping centers'
         ]
-        get_places(lat, lon, search_radius, local_amenities[0])
-        
-        
+        get_places(lat, lon, search_radius, 'restaurants')  
         
 main()    
     
