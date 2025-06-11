@@ -1,6 +1,7 @@
 from Coordinates_Obtainer import get_coordinates_from_address
 import requests
 import math
+import heapq
 
 BASE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 PLACES_API_KEY = "AIzaSyDe6GsGguP9k4zBNHEE9hzozj2HGFGRPp0"
@@ -46,18 +47,20 @@ def get_info(place, lat, lon):
     
 def get_place_data(places, check_operation, lat, lon):
     obtained_places = []
-    for place in places:
-        place_types = place.get('types', [])
-        
+    for idx, place in enumerate(places):
         if check_operation == None:
             place_info = get_info(place, lat, lon)
-            obtained_places.append(place_info)
+            heapq.heappush(obtained_places, (place_info['rating'], idx, place_info))
         else:
+            place_types = place.get('types', [])
             if check_operation(place_types):
                 place_info = get_info(place, lat, lon)
-                obtained_places.append(place_info)
-            
-    return obtained_places
+                heapq.heappush(obtained_places, (place_info['rating'], idx, place_info))
+                
+        if len(obtained_places) > 5:
+            heapq.heappop(obtained_places)
+
+    return [item[2] for item in sorted(obtained_places, key = lambda x: x[0], reverse = True)]
 
 def get_data(lat, lon, radius, place_type, operation):
     params = {
@@ -69,7 +72,6 @@ def get_data(lat, lon, radius, place_type, operation):
              
     response = requests.get(BASE_PLACES_URL, params = params)
     data = response.json()
-    
     if data['status'] == 'OK':
         return get_place_data(data['results'], operation, lat, lon)
     else:
@@ -93,7 +95,6 @@ def main():
         amenities_data = {}
         
         for local_amenity in local_amenities:
-            
             if local_amenity == 'restaurant':
                 amenities_data[local_amenity] = get_data(lat, lon, search_radius, local_amenity, check_if_restaurant)  
             else:
