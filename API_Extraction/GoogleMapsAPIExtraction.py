@@ -31,38 +31,63 @@ def check_if_restaurant(place_types):
     
     return False
 
-def get_info(place, lat, lon):
+def get_amenity_info(amenity, lat, lon):
     dist = None
-    if place['geometry']['location']['lat'] and place['geometry']['location']['lng']:
-        dist = find_distance(lat, lon, place['geometry']['location']['lat'], place['geometry']['location']['lng'])
+    if amenity['geometry']['location']['lat'] and amenity['geometry']['location']['lng']:
+        dist = find_distance(lat, lon, amenity['geometry']['location']['lat'], amenity['geometry']['location']['lng'])
         
-    place_info = {
-                'name': place.get('name'),
-                'address': place.get('vicinity'),
-                'rating': place.get('rating'),
+    amenity_info = {
+                'name': amenity.get('name'),
+                'address': amenity.get('vicinity'),
+                'rating': amenity.get('rating'),
                 'distance': dist
             }
     
-    return place_info
+    return amenity_info
+
+def get_necessity_info(necessity, lat, lon):
+    dist = None
+    if necessity['geometry']['location']['lat'] and necessity['geometry']['location']['lng']:
+        dist = find_distance(lat, lon, necessity['geometry']['location']['lat'], necessity['geometry']['location']['lng'])
+        
+    necessity_info = {
+                'name': necessity.get('name'),
+                'address': necessity.get('vicinity'),
+                'distance': dist
+            }
     
-def get_place_data(places, check_operation, lat, lon):
-    obtained_places = []
-    for idx, place in enumerate(places):
+    return necessity_info
+
+def get_amenity_data(amenities, lat, lon, check_operation):
+    obtained_amenities = []
+    for idx, amenity in enumerate(amenities):
         if check_operation == None:
-            place_info = get_info(place, lat, lon)
-            heapq.heappush(obtained_places, (place_info['rating'], idx, place_info))
+            amenity_info = get_amenity_info(amenity, lat, lon)
+            heapq.heappush(obtained_amenities, (amenity_info['rating'], idx, amenity_info))
         else:
-            place_types = place.get('types', [])
-            if check_operation(place_types):
-                place_info = get_info(place, lat, lon)
-                heapq.heappush(obtained_places, (place_info['rating'], idx, place_info))
+            amenity_types = amenity.get('types', [])
+            if check_operation(amenity_types):
+                amenity_info = get_amenity_info(amenity, lat, lon)
+                heapq.heappush(obtained_amenities, (amenity_info['rating'], idx, amenity_info))
                 
-        if len(obtained_places) > 5:
-            heapq.heappop(obtained_places)
+        if len(obtained_amenities) > 5:
+            heapq.heappop(obtained_amenities)
 
-    return [item[2] for item in sorted(obtained_places, key = lambda x: x[0], reverse = True)]
+    return [item[2] for item in sorted(obtained_amenities, key = lambda x: x[0], reverse = True)]
 
-def get_data(lat, lon, radius, place_type, operation):
+def get_necessity_data(necessities, lat, lon):
+    obtained_necessities = []
+    for idx, necessity in enumerate(necessities):
+        necessity_info = get_necessity_info(necessity, lat, lon)
+        distance = necessity_info['distance'] * -1
+        heapq.heappush(obtained_necessities, (distance, idx, necessity_info))
+        
+        if len(obtained_necessities) > 5:
+            heapq.heappop(obtained_necessities)
+        
+    return [item[2] for item in sorted(obtained_necessities, key = lambda x: x[0], reverse = True)]
+
+def get_data(lat, lon, radius, place_type):
     params = {
         'location': f'{lat},{lon}',
         'radius': radius,
@@ -73,10 +98,27 @@ def get_data(lat, lon, radius, place_type, operation):
     response = requests.get(BASE_PLACES_URL, params = params)
     data = response.json()
     if data['status'] == 'OK':
-        return get_place_data(data['results'], operation, lat, lon)
+        return data['results']
     else:
         print(f"Error fetching places: {data['status']}")
         return None
+    
+def get_local_amenity_data(lat, lon, radius, place_type, operation):
+    obtained_data = get_data(lat, lon, radius, place_type)
+    
+    if obtained_data != None:
+        return get_amenity_data(obtained_data, lat, lon, operation)
+        
+    else:
+        return []
+    
+def get_local_necessity_data(lat, lon, radius, place_type):
+    obtained_data = get_data(lat, lon, radius, place_type)
+    
+    if obtained_data != None:
+        return get_necessity_data(obtained_data, lat, lon)
+    else:
+        return []
 
 def main():
     address = '52 Hemenway Street, Boston, MA, 02115'
@@ -92,15 +134,25 @@ def main():
             'supermarket', 'gym', 'cafe', 'shopping_mall'
         ]
         
+        local_necessities = [
+            'hospital', 'bank', 'pharmacy'
+        ]
+        
         amenities_data = {}
+        necessities_data = {}
         
         for local_amenity in local_amenities:
             if local_amenity == 'restaurant':
-                amenities_data[local_amenity] = get_data(lat, lon, search_radius, local_amenity, check_if_restaurant)  
+                amenities_data[local_amenity] = get_local_amenity_data(lat, lon, search_radius, local_amenity, check_if_restaurant)  
             else:
-                amenities_data[local_amenity] = get_data(lat, lon, search_radius, local_amenity, check_if_restaurant)  
+                amenities_data[local_amenity] = get_local_amenity_data(lat, lon, search_radius, local_amenity, check_if_restaurant)  
+        
+        for local_necessity in local_necessities:
+            necessities_data[local_necessity] = get_local_necessity_data(lat, lon, search_radius, local_necessity)
+            
         
         print(amenities_data['restaurant'])
+        print(necessities_data)
         
 main()    
     
