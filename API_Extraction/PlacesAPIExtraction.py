@@ -73,7 +73,7 @@ def get_top_k_places(places, lat, lon, info_extractor, sort_key, k = 5):
         if len(heap) > k:
             heapq.heappop(heap)
     
-    return [item[2] for item in sorted(heap, key = lambda x: x[0], reverse = (sort_key != 'distance'))]
+    return [item[2] for item in sorted(heap, key = lambda x: x[0], reverse = True)]
 
 def get_data(lat, lon, radius, place_type):
     cache_key = f"{lat:.5f}_{lon:.5f}_{radius}_{place_type}"
