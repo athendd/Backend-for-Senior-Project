@@ -1,8 +1,7 @@
-from Coordinates_Obtainer import get_coordinates_from_address
+from utils import get_coordinates_from_address
 import requests
 import math
 import heapq
-import json
 import os
 from diskcache import Cache
 
@@ -75,6 +74,9 @@ def get_top_k_places(places, lat, lon, info_extractor, sort_key, k = 5):
     
     return [item[2] for item in sorted(heap, key = lambda x: x[0], reverse = True)]
 
+"""
+Obtains data from Places API for current place_type
+"""
 def get_data(lat, lon, radius, place_type):
     cache_key = f"{lat:.5f}_{lon:.5f}_{radius}_{place_type}"
     
@@ -95,7 +97,7 @@ def get_data(lat, lon, radius, place_type):
     if data['status'] != 'OK':
         raise RuntimeError(f"API error: {data['status']} - {data.get('error_message')}")
     
-    # Save results to cache
+    #Save results to cache
     cache[cache_key] = data['results']
     return data['results']
     
@@ -116,7 +118,10 @@ def get_necessity_data(lat, lon, radius, place_type):
         return get_top_k_places(necessities, lat, lon, get_necessity_info, sort_key='distance')
     else:
         return []
-    
+
+"""
+Starts process to obtain data from the Places API for both local amenities and necessities
+"""
 def fetch_all_data(address, radius, amenities, necessities):
     lat, lon = get_coordinates_from_address(address)
     
@@ -135,7 +140,7 @@ def fetch_all_data(address, radius, amenities, necessities):
     
     return amenities_data, necessities_data
 
-#Have it take in address in the future
+#Have it take in an address in the future
 def main():
     if not PLACES_API_KEY:
         raise EnvironmentError("Missing Google Places API key")
@@ -160,7 +165,8 @@ def main():
         
     #Have it return amenities and necessities data
         
-main()    
+if __name__ == "__main__":
+    main()   
     
 
     
