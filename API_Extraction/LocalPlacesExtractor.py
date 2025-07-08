@@ -1,4 +1,4 @@
-from utils import get_coordinates_from_address
+from utils import get_coordinates_from_address, find_distance
 import requests
 import math
 import heapq
@@ -26,26 +26,7 @@ class PlaceType(Enum):
     BANK = "bank"
     PHARMACY = "pharmacy"
 
-def find_distance(lat1, lon1, lat2, lon2):
-    #Radius of the Earth in miles
-    radius = 3958.8
-    
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
-    
-    diff_lon = lon2_rad - lon1_rad
-    diff_lat = lat2_rad - lat1_rad
-    
-    #Haversine formula
-    a = math.sin(diff_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(diff_lon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    dist = radius * c
-    
-    return round(dist, 2)
-
-class PlacesAPIExtractor:
+class LocalPlacesExtractor:
     
     def __init__(self, lat, lon, search_radius, top_k = 5):
         self.lat = lat
@@ -70,12 +51,6 @@ class PlacesAPIExtractor:
     """
     def fetch_all_data(self):
         
-        if not PLACES_API_KEY:
-            raise EnvironmentError("Missing Google Places API key")
-        
-        if self.lat is None or self.lon is None:
-            raise ValueError('Invalid Address')
-        
         self.is_amenity = True
         amenities_data = {
             a.value: self.get_place_data(a.value)
@@ -88,7 +63,8 @@ class PlacesAPIExtractor:
             for n in self.local_necessities
         }
         
-        return amenities_data, necessities_data
+        #Combine the amenities and necessities into one dictionary
+        return amenities_data | necessities_data
     
     def get_place_data(self, place_type):
         places = self.get_api_data(place_type)
@@ -176,19 +152,3 @@ class PlacesAPIExtractor:
     
     def check_if_restaurant(self, place_types):
         return 'restaurant' in place_types and 'lodging' not in place_types and 'hotel' not in place_types
-    
-    
-"""
-Run and test the PlacesAPIExtractor class
-"""    
-
-address = '52 Hemenway Street, Boston, MA, 02115'
-
-lat, lon = get_coordinates_from_address(address)
-
-placesAPIExtractor = PlacesAPIExtractor(lat, lon, 16093)
-
-amenities, necessities = placesAPIExtractor.fetch_all_data()
-
-print(amenities['restaurant'])
-    
