@@ -1,6 +1,5 @@
 from utils import get_coordinates_from_address, find_distance
 import requests
-import math
 import heapq
 import os
 from diskcache import Cache
@@ -31,7 +30,7 @@ class PlaceType(Enum):
     TRAIN = "train_station"
     SUBWAY = "subway_station"
 
-class LocalPlacesExtractor:
+class PlacesAPIExtractor:
     
     def __init__(self, lat, lon, search_radius, top_k = 5):
         self.lat = lat
@@ -78,7 +77,7 @@ class LocalPlacesExtractor:
             for t in self.local_transportation
         }
         
-        #Combine the amenities and necessities into one dictionary
+        #Combine everything into one dictionary
         return amenities_data | necessities_data | local_tran_data
     
     def get_place_data(self, place_type):
@@ -98,22 +97,18 @@ class LocalPlacesExtractor:
         dist = None
         if place['geometry']['location']['lat'] and place['geometry']['location']['lng']:
             dist = find_distance(self.lat, self.lon, place['geometry']['location']['lat'], place['geometry']['location']['lng'])
-        
-        if self.is_tran:
-            place_info = {
+    
+        place_info = {
             'name': place.get('name', 'Unkown'),
+            'address': place.get('vicinity', 'Unkown'),
             'distance': dist
             }
             
-        else:
-            place_info = {
-                'name': place.get('name', 'Unkown'),
-                'address': place.get('vicinity', 'Unkown'),
-                'distance': dist
-                }
-            
         if self.is_amenity:
             place_info['rating'] = place.get('rating', 0)
+            
+        if self.is_tran:
+            del place_info['address']
             
         return place_info 
 
