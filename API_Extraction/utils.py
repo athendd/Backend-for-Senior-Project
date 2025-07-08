@@ -5,11 +5,15 @@ import math
 Converts a given address into latitude and longitude coordinates
 """
 def get_coordinates_from_address(address):
-    geolocator = Nominatim(user_agent="LeaseLink")
-    location = geolocator.geocode(address)
-    if location:
-        return location.latitude, location.longitude
-    else:
+    try:
+        geolocator = Nominatim(user_agent="LeaseLink")
+        location = geolocator.geocode(address)
+        if location:
+            return location.latitude, location.longitude
+        else:
+            return None, None
+    except Exception as e:
+        print(f"Geocoding error for address '{address}': {e}")
         return None, None
 
 """

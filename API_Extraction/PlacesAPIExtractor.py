@@ -5,6 +5,7 @@ import os
 from diskcache import Cache
 import time
 from enum import Enum
+import logging
 
 BASE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY')
@@ -83,6 +84,9 @@ class PlacesAPIExtractor:
     def get_place_data(self, place_type):
         places = self.get_api_data(place_type)
         
+        if places == []:
+            raise ValueError(f'Unable to obtain from PlacesAPI for: {place_type}')
+        
         if places is not None:
             if self.is_amenity:
                 if place_type == 'restaurant':
@@ -94,23 +98,27 @@ class PlacesAPIExtractor:
             return []
      
     def get_info(self, place):
-        dist = None
-        if place['geometry']['location']['lat'] and place['geometry']['location']['lng']:
-            dist = find_distance(self.lat, self.lon, place['geometry']['location']['lat'], place['geometry']['location']['lng'])
-    
-        place_info = {
-            'name': place.get('name', 'Unkown'),
-            'address': place.get('vicinity', 'Unkown'),
-            'distance': dist
-            }
-            
-        if self.is_amenity:
-            place_info['rating'] = place.get('rating', 0)
-            
-        if self.is_tran:
-            del place_info['address']
-            
-        return place_info 
+        try:
+            dist = None
+            if place['geometry']['location']['lat'] and place['geometry']['location']['lng']:
+                dist = find_distance(self.lat, self.lon, place['geometry']['location']['lat'], place['geometry']['location']['lng'])
+        
+            place_info = {
+                'name': place.get('name', 'Unkown'),
+                'address': place.get('vicinity', 'Unkown'),
+                'distance': dist
+                }
+                
+            if self.is_amenity:
+                place_info['rating'] = place.get('rating', 0)
+                
+            if self.is_tran:
+                del place_info['address']
+                
+            return place_info 
+        except Exception as e:
+            logging.warning(f"Invalid place data structure: {e}")
+            return {}
 
     def get_top_k_places(self, places, sort_key):
         heap = []
@@ -142,30 +150,47 @@ class PlacesAPIExtractor:
         }
         
         all_results = []
+        attempts = 0
         
         while True:
-            response = requests.get(BASE_PLACES_URL, params=params)
-            data = response.json()
+            try:
+                response = requests.get(BASE_PLACES_URL, params=params)
+                
+                if response.status_code != 200:
+                    logging.warning(f'API Called failed: {response.status_code} - {response.text}')
+                    return []
             
-            if data['status'] != 'OK':
-                raise RuntimeError(f"API error: {data['status']} - {data.get('error_message')}")
+                data = response.json()
             
-            results = data.get('results', [])
-            all_results.extend(results)
+                if data['status'] != 'OK':
+                    logging.warning(f"Google Places API error: {data.get('status')} - {data.get('error_message')}")
+                    return []
+
+                results = data.get('results', [])
+                all_results.extend(results)
             
-            next_token = data.get('next_page_token')
+                next_token = data.get('next_page_token')
             
-            if not next_token:
-                break
-            
-            time.sleep(2)
-            params = {
-                'pagetoken': next_token,
-                'key': PLACES_API_KEY
-            }
+                if not next_token:
+                    break
+                
+                time.sleep(2)
+                params = {
+                    'pagetoken': next_token,
+                    'key': PLACES_API_KEY
+                }
+                
+            except requests.RequestException as e:
+                attempts += 1
+                if attempts >= 3:
+                    logging.error(f"Failed after 3 attempts: {e}")
+                    return []
+                logging.warning(f"Temporary failure, retrying... ({e})")
+                time.sleep(2)
             
         #Save results to cache
         cache[cache_key] = data['results']
+        
         return data['results']
     
     def check_if_restaurant(self, place_types):
