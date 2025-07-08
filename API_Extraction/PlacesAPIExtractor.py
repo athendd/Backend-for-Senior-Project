@@ -85,7 +85,8 @@ class PlacesAPIExtractor:
         places = self.get_api_data(place_type)
         
         if places == []:
-            raise ValueError(f'Unable to obtain from PlacesAPI for: {place_type}')
+            logging.warning(f'Unable to obtain data from PlacesAPI for: {place_type}')
+            return[]
         
         if places is not None:
             if self.is_amenity:
