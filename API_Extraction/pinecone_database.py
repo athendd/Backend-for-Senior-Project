@@ -1,23 +1,29 @@
 from pinecone import Pinecone, ServerlessSpec
 import logging
-import openai
 import spacy
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import re
+import os
+import pandas as pd
+from sentence_transformers import SentenceTransformer
 
-pinecone_api_key = 'pcsk_7V2pDe_2pxQsSG2KTR1YxgLP64PyYMfN6cWUVvWeMFHneFuPZNZiRnfQRjzfc36t8CkCJu'
+pinecone_api_key = os.environ.get('PINECONE_API_KEY')
+
 pc = Pinecone(api_key = pinecone_api_key, environment='example-environment')
-openai_api_key = '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'
+
+embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 """
 Uploader for example database
 """
 def example_uploader(df):
+    index_name = 'example-database'
+    create_pinecone_index(index_name, 384, 'cosine')
+    
+    index = pc.Index(index_name)
+
     for i, row in df.iterrows():
         original = row.to_dict()
-        
-        
+        upload_property_vectory(index, original, f'mysql_id_{i}')
 
 """
 Creates an index on Pinecone if it doesn't already exist
@@ -33,28 +39,31 @@ def create_pinecone_index(index_name, vector_dimension, similarity_metric):
         
 """
 Uploads a given property to the Pinecone vector database
+
+Alter in the future to remove city and zipcode add on
 """
-def upload_property_vectory(index_name, property_dic, mysql_id):
+def upload_property_vectory(index, property_dic, mysql_id):
     combined_text = create_text(property_dic)
     combined_text += get_text_representations(property_dic)
-    
-    city, zipcode = get_city_zip_from_address(property_dic['address'])
-    
-    property_dic['city'] = city
-    property_dic['zipcode'] = zipcode 
+    text_embedding = get_text_embedding(combined_text)    
     
     metadata = create_metadata(mysql_id, property_dic)
     
-    index = pc.Index(index_name)
+    index.upsert([
+        {
+            'id': mysql_id,
+            'values': text_embedding.tolist(),
+            'metadata': metadata
+        }
+    ]) 
     
 """
-OpenAI perform text embedding on combined text
+SentenceTransformer to perform text embedding on combined text
 """
-def get_openai_embedding(text):
-    response = openai.embeddings.create(model = 'text-embedding-3-small', input = [text])
+def get_text_embedding(text):
     
-    return response.data[0].embedding
-
+    return embedding_model.encode([text])[0]
+    
 """
 Turns the address, description, property type, and neighborhood type into text
 """
@@ -84,7 +93,7 @@ def get_text_representations(property_dic):
     if property_dic['office'] == True:
         features.append('Has an office')
     
-    if property_dic['utilities'] == True:
+    if property_dic['utilities_included'] == True:
         features.append('Includes utilities')
     
     if property_dic['handicap_accessible'] == True:
@@ -129,23 +138,55 @@ def create_metadata(mysql_id, property_dic):
         "property_type": property_dic['property_type'],
         "address": property_dic['address'],
         "num_beds": property_dic['number_of_beds'],
-        "neighborhood": property_dic['neighborhood_type']
+        "neighborhood": property_dic['neighborhood_type'],
+        "city": property_dic['city'],
+        "zipcode": property_dic['zipcode'],
+        "latitude": property_dic['latitude'],
+        "longitude": property_dic['longitude']
     }
     
     return metadata
 
 """
-Checks to see if text just mentions a location 
+Checks to see if text only mentions a location (City or Place)
+
+Returns true if the text only mentions a location
 """
 def check_if_just_location(input_text):
+    input_text = input_text.strip() 
+    
     nlp = spacy.load("en_core_web_sm")
     doc = nlp(input_text)
+        
+    entity_texts = [ent.text for ent in doc.ents]
+    combined_entities = " ".join(entity_texts).strip()
+
+    #Checks to see if words that aren't entities are used
+    if len(input_text) != len(combined_entities):
+        return False
     
     for ent in doc.ents:
-        if ent.label_ != 'GPE' and ent.label_ != 'LOC':
+        if ent.label_ != 'GPE':
             return False
         
     return True
+
+"""
+Searches Pinecone database, filtering only by location
+"""
+def search_by_location_only(search_query, index, top_k=100):
+    search_query_embedding = embedding_model.encode([search_query])[0]
+
+    results = index.query(
+        vector = search_query_embedding.tolist(),  
+        top_k = top_k,
+        filter = {
+            "city": {"$eq": search_query}
+        },
+        include_metadata = True
+    )
+
+    return results['matches']
 
 """
 Gets city and zipcode from a given address
@@ -163,7 +204,14 @@ def get_city_zip_from_address(address):
         
     return city, zipcode
     
+#df = pd.read_csv(r'API_Extraction\boston_properties.csv')
+#example_uploader(df)
 
+search_query = 'apartments Boston'
+index = pc.Index('example-database')
 
-    
-    
+if check_if_just_location(search_query) == True:
+    print('yes')
+    results = search_by_location_only(search_query, index)
+    print(len(results))
+
