@@ -30,10 +30,7 @@ def get_city_zip_from_address(address):
     
     if zipcode_match:
         zipcode = zipcode_match.group(0)
-        
-    print(city)
-    print(zipcode)
-        
+                
     return city, zipcode
 
 """
