@@ -2,17 +2,22 @@ import os
 import logging
 from pinecone import Pinecone, ServerlessSpec
 from sentence_transformers import SentenceTransformer
+import pandas as pd
 
 pinecone_api_key = os.environ.get('PINECONE_API_KEY')
 
 class PineconeInteractor:
     
-    def __init__(self, index_name):
+    def __init__(self, index_name, vector_dimension = 384, similarity_metric = 'cosine'):
         self.pc = Pinecone(api_key=pinecone_api_key, environment='example-environment')
+        index_names = [index["name"] for index in self.pc.list_indexes()]
+        
+        if index_name not in index_names:
+            self._create_pinecone_index(index_name, vector_dimension, similarity_metric)
         self.index_name = index_name
         self.index = self.pc.Index(index_name)
         self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')  
-    
+        
     """
     Creates a pinecone index
     
@@ -21,16 +26,13 @@ class PineconeInteractor:
         -vector_dimension (int): Dimensions of the index
         -similarity_metric (str): Metric to compare vectors in the vector database
     """
-    def create_pinecone_index(self, vector_dimension, similarity_metric):
-        if self.index_name not in self.pc.list_indexes:
-            self.pc.create_index(
-            name= self.index_name,
+    def _create_pinecone_index(self, index_name, vector_dimension, similarity_metric):
+        self.pc.create_index(
+            name= index_name,
             dimension=vector_dimension,
             metric=similarity_metric,
             spec=ServerlessSpec(cloud='aws', region='us-east-1')
-        )
-        else:
-            logging.warning('Index already exists')
+            )
 
     """
     Creates the embedding and metadata dictionary for the given property dic and then uploads them to the chosen Pinecone index
@@ -40,8 +42,8 @@ class PineconeInteractor:
         -property_dic (dic): Dictionary containing all relevant information on a property
     """
     def upload_vector(self, mysql_id, property_dic):
-        property_vector = self.create_property_vector(property_dic)
-        metadata_dic = self.create_metadata_dictionary(mysql_id, property_dic)
+        property_vector = self._create_property_vector(property_dic)
+        metadata_dic = self._create_metadata_dictionary(mysql_id, property_dic)
         
         self.index.upsert([{
         'id': mysql_id,
@@ -49,6 +51,36 @@ class PineconeInteractor:
         'metadata': metadata_dic
         }])
         
+    """
+    Gets the metadata vector for a given property based on its id
+    
+    Args:
+        -id (str): mysql_id of the property vector
+        
+    Returns the metadata dictionary for the property
+    """
+    def get_metadata(self, id):
+        response = self.index.fetch(ids=[id])
+        metadata = response.vectors[id].metadata
+        
+        return metadata
+    
+    """
+    Gets the vector for a given property based on the given id
+    
+    Args:
+        -id (str): mysql_id of the property
+        
+    Returns the vector of the property
+    """
+    def get_vector(self, id):
+        res = self.index.fetch(ids=[id])
+
+        if id in res.vectors:    
+            return res.vectors[id].values
+        
+        return None
+    
     """
     Creates the vector representation of the property
     
@@ -59,7 +91,7 @@ class PineconeInteractor:
     
     Add weights later on
     """
-    def create_property_vector(self, property_dic):
+    def _create_property_vector(self, property_dic):
         combined_text = f"""
         {property_dic['description']}. Located in {property_dic['city']}. {property_dic['number_of_beds']}-bedroom,
         {property_dic['number_of_baths']}-baths {property_dic['property_type']}. Has {property_dic['number_of_floors']} floors. 
@@ -110,7 +142,7 @@ class PineconeInteractor:
     def get_text_embedding(self, text):
         return self.embedding_model.encode([text])[0]
     
-    def create_metadata_dictionary(self, mysql_id, property_dic):
+    def _create_metadata_dictionary(self, mysql_id, property_dic):
         return {
         'mysql_id': mysql_id,
         'property_type': property_dic['property_type'],
@@ -141,7 +173,8 @@ class PineconeInteractor:
         'ac': property_dic['ac'],
         'basement': property_dic['basement'],
         'yard': property_dic['yard'],
-        'recently_renovated': property_dic['revently_renovated']
+        'recently_renovated': property_dic['recently_renovated'],
+        'average_rating': property_dic['average_rating']
     }   
         
     def handicap_accessible_text(self, handicap_accessible):
@@ -154,7 +187,7 @@ class PineconeInteractor:
         if smoking_policy:
             return 'Smoking is allowed. '
         else:
-            ''
+            return ''
             
     def utilities_text(self, utilities):
         if utilities:
@@ -172,7 +205,7 @@ class PineconeInteractor:
     
     def recently_renovated_text(self, recently_renovated):
         if recently_renovated:
-            return 'Was recently renovated'
+            return 'Was recently renovated. '
         else:
             return ''
     
@@ -211,4 +244,3 @@ class PineconeInteractor:
             return 'Many daily errands can be done on foot.'
         else:
             return 'Extremely walkable — most shops and services are within walking distance.'
-        

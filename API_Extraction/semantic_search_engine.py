@@ -53,6 +53,7 @@ class SemanticSearch:
     Returns the top k results from the given search query
     """
     def search_for_properties(self, top_k=100, advanced_filters = None):
+        #If search query only has spaces
         if self.search_query.isspace():
             return []
         
