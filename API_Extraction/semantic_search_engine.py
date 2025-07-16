@@ -10,7 +10,7 @@ class SemanticSearch:
         self.user_city = user_city
         self.nlp = spacy.load("en_core_web_sm") 
         self.zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')
-        self.zero_vector = [0.0] * 384
+        self.zero_vector = [0.0] * 768
         #Change 4 to 5 once you fix the issue
         self.address_pattern = re.compile(
             r"\d{3,6} [A-Za-z]+(?: [A-Za-z]+)*, [A-Za-z ]+, [A-Z]{2} \d{4}",
