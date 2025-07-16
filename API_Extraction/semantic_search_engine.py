@@ -6,7 +6,7 @@ class SemanticSearch:
     
     def __init__(self, search_query, user_city):
         self.search_query = search_query
-        self.pinecone_interactor = PineconeInteractor('example-database')
+        self.pinecone_interactor = PineconeInteractor('final-database')
         self.user_city = user_city
         self.nlp = spacy.load("en_core_web_sm") 
         self.zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')
@@ -42,7 +42,6 @@ class SemanticSearch:
     
     def contains_us_address_regex(self, stripped_query):        
         address_search_pattern = re.search(self.address_pattern, stripped_query)
-        print(address_search_pattern)
         if address_search_pattern != None:
             return address_search_pattern.group(0)
         
@@ -91,13 +90,7 @@ class SemanticSearch:
         if location_only:
             search_result = self.pinecone_interactor.perform_search(self.zero_vector, top_k, filter_dict)
         else:
-            #Takes well over and second and potentially over 3 seconds
             search_query_embedding = self.pinecone_interactor.get_text_embedding(self.search_query)
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, top_k, filter_dict)
-        
-        return search_result
             
-search_query = "69224 Ashley Stravenue, Boston, MA 2110"
-semantic_search = SemanticSearch(search_query, 'New York')
-one = semantic_search.search_for_properties()
-print(one)
+        return search_result
