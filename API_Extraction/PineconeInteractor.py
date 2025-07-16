@@ -41,7 +41,6 @@ class PineconeInteractor:
                 include_metadata = False
             )['matches']
         
-        print(results)
         #Return only IDs
         return [result['id'] for result in results]  
 
@@ -107,16 +106,18 @@ class PineconeInteractor:
         {property_dic['description']}. Located in {property_dic['city']}. {property_dic['number_of_beds']}-bedroom,
         {property_dic['number_of_baths']}-baths {property_dic['property_type']}. Has {property_dic['number_of_floors']} floors. 
         Rent costs ${property_dic['monthly_rent']} a month.
-        Built in the year {property_dic['year_built']}. In a {property_dic['neighborhood_type']} neihghborhood. Can have between 
+        Built in the year {property_dic['year_built']}. In a {property_dic['neighborhood_type']} neighborhood. Can have between 
         {property_dic['min_occupants']} and {property_dic['max_occupants']} occupants. Recommended for people between the ages of
         {property_dic['min_age']} and {property_dic['max_age']}. 
         """
-        
+
+        combined_text += self.square_footage_text(property_dic['property_type'], property_dic['square_footage'])
         combined_text += self.handicap_accessible_text(property_dic['handicap_accessible'])
         combined_text += self.smoking_policy_text(property_dic['smoking_policy'])
         combined_text += self.utilities_text(property_dic['utilities_included'])
         combined_text += self.basement_text(property_dic['basement'])
         combined_text += self.recently_renovated_text(property_dic['recently_renovated'])
+        combined_text += self.pet_policy_text(property_dic['pet_policy'])
         
         boolean_cols = [
             'washer', 'dryer', 'ac', 'heating', 'garage', 'office', 'dishwasher', 'yard', 'balcony', 'fireplace', 'patio',
@@ -219,6 +220,28 @@ class PineconeInteractor:
             return 'Was recently renovated. '
         else:
             return ''
+        
+    def pet_policy_text(self, pet_policy):
+        if pet_policy: 
+            return 'Pets are allowed. '
+        else:
+            return ''
+        
+    def square_footage_text(self, property_type, square_footage):
+        if property_type == 'apartment':
+            if square_footage < 600:
+                return 'Very little space. '
+            elif 600 <= square_footage < 1000:
+                return 'Average amount of space. '
+            else:
+                return 'A lot of space. '
+        else:
+            if square_footage < 1000:
+                return 'Very little space. '
+            elif 1000 <= square_footage < 2500:
+                return 'Average amount of space. '
+            else:
+                return 'A lot of space. '
     
     def transit_score_text(self, transit_score):
         if 0 <= transit_score < 21:
