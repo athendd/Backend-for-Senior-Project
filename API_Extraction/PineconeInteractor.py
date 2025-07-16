@@ -15,7 +15,6 @@ class PineconeInteractor:
         self.index_name = index_name
         self.index = self.pc.Index(index_name)
         self.embedding_model = SentenceTransformer('sentence-transformers/paraphrase-albert-small-v2') 
-        #self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device = 'cuda')  
         
     """
     Creates a pinecone index
