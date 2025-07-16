@@ -33,6 +33,18 @@ class PineconeInteractor:
             metric=similarity_metric,
             spec=ServerlessSpec(cloud='aws', region='us-east-1')
             )
+        
+    def perform_search(self, vector, top_k, filter_dict):
+        results = self.index.query(
+                vector = vector,  
+                top_k = top_k,
+                filter = filter_dict,
+                include_metadata = False
+            )['matches']
+        
+        print(results)
+        #Return only IDs
+        return [result['id'] for result in results]  
 
     """
     Creates the embedding and metadata dictionary for the given property dic and then uploads them to the chosen Pinecone index
