@@ -64,14 +64,6 @@ class SemanticSearch:
                     filter_dict[key] = value
                     
         return filter_dict
-    
-    def perform_search(self, vector, top_k, filter_dict):
-        return self.pinecone_interactor.index.query(
-                vector = vector,  
-                top_k = top_k,
-                filter = filter_dict,
-                include_metadata = True
-            )['matches']
             
     """
     Searches Pinecone database for k results that best match the given search query
@@ -97,11 +89,11 @@ class SemanticSearch:
         filter_dict = self.create_filter_dict(location_type, location, advanced_filters)
         
         if location_only:
-            search_result = self.perform_search(self.zero_vector, top_k, filter_dict)
+            search_result = self.pinecone_interactor.perform_search(self.zero_vector, top_k, filter_dict)
         else:
             #Takes well over and second and potentially over 3 seconds
             search_query_embedding = self.pinecone_interactor.get_text_embedding(self.search_query)
-            search_result = self.perform_search(search_query_embedding, top_k, filter_dict)
+            search_result = self.pinecone_interactor.perform_search(search_query_embedding, top_k, filter_dict)
         
         return search_result
             
