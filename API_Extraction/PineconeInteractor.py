@@ -1,13 +1,12 @@
 import os
 from pinecone import Pinecone, ServerlessSpec
 from sentence_transformers import SentenceTransformer
-import pandas as pd
 
 pinecone_api_key = os.environ.get('PINECONE_API_KEY')
 
 class PineconeInteractor:
     
-    def __init__(self, index_name, vector_dimension = 384, similarity_metric = 'cosine'):
+    def __init__(self, index_name, vector_dimension = 768, similarity_metric = 'cosine'):
         self.pc = Pinecone(api_key=pinecone_api_key, environment='example-environment')
         index_names = [index["name"] for index in self.pc.list_indexes()]
         
@@ -15,8 +14,8 @@ class PineconeInteractor:
             self._create_pinecone_index(index_name, vector_dimension, similarity_metric)
         self.index_name = index_name
         self.index = self.pc.Index(index_name)
-        # SentenceTransformer('sentence-transformers/paraphrase-albert-small-v2') to make it run faster for semantic search
-        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device = 'cuda')  
+        self.embedding_model = SentenceTransformer('sentence-transformers/paraphrase-albert-small-v2') 
+        #self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device = 'cuda')  
         
     """
     Creates a pinecone index
@@ -59,7 +58,7 @@ class PineconeInteractor:
         
         self.index.upsert([{
         'id': mysql_id,
-        'values': property_vector.tolist(),
+        'values': property_vector,
         'metadata': metadata_dic
         }])
         
@@ -152,7 +151,7 @@ class PineconeInteractor:
     Returns the numerical representation or embedding of the text
     """
     def get_text_embedding(self, text):
-        return self.embedding_model.encode([text], normalize_embeddings = True)[0]
+        return self.embedding_model.encode([text])[0].tolist()
     
     def _create_metadata_dictionary(self, mysql_id, property_dic):
         return {
