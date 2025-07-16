@@ -1,14 +1,12 @@
 from utils import get_coordinates_from_address, find_distance
 import requests
 import heapq
-import os
 from diskcache import Cache
 import time
 from enum import Enum
 import logging
 
 BASE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY')
 
 cache = Cache('.places_cache')
 
@@ -33,10 +31,11 @@ class PlaceType(Enum):
 
 class PlacesAPIExtractor:
     
-    def __init__(self, lat, lon, search_radius, top_k = 5):
+    def __init__(self, lat, lon, search_radius, places_api_key, top_k = 5):
         self.lat = lat
         self.lon = lon
         self.search_radius = search_radius
+        self.places_api_key = places_api_key
         self.is_amenity = False
         self.is_tran = False
         self.check_operation = False
@@ -147,7 +146,7 @@ class PlacesAPIExtractor:
             'location': f'{self.lat},{self.lon}',
             'radius': self.search_radius,
             'type': place_type,
-            'key': PLACES_API_KEY,
+            'key': self.places_api_key,
         }
         
         all_results = []
@@ -178,7 +177,7 @@ class PlacesAPIExtractor:
                 time.sleep(2)
                 params = {
                     'pagetoken': next_token,
-                    'key': PLACES_API_KEY
+                    'key': self.places_api_key
                 }
                 
             except requests.RequestException as e:

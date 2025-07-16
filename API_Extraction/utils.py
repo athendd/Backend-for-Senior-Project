@@ -1,5 +1,6 @@
 from geopy.geocoders import Nominatim
 import math
+import re
 
 """
 Converts a given address into latitude and longitude coordinates
@@ -15,6 +16,22 @@ def get_coordinates_from_address(address):
     except Exception as e:
         print(f"Geocoding error for address '{address}': {e}")
         return None, None
+    
+"""
+Gets city and zipcode from a given address
+"""
+def get_city_zip_from_address(address):
+    split_address = address.split(',')
+    
+    city = split_address[1].strip()
+    
+    zipcode = None
+    zipcode_match = re.search(r'\b\d{5}(?:-\d{4})?\b', address)
+    
+    if zipcode_match:
+        zipcode = zipcode_match.group(0)
+                
+    return city, zipcode
 
 """
 Finds the distance between two places by using their corresponding latitudes and longitudes
