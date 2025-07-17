@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from pinecone import Pinecone, ServerlessSpec
 from sentence_transformers import SentenceTransformer
 

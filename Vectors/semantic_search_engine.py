@@ -5,7 +5,7 @@ from pinecone_interactor import PineconeInteractor
 class SemanticSearch:
     
     def __init__(self, user_city):
-        self.pinecone_interactor = PineconeInteractor('new-example-database')
+        self.pinecone_interactor = PineconeInteractor('final-database')
         self.user_city = user_city
         self.nlp = spacy.load("en_core_web_sm") 
         self.zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')
@@ -95,10 +95,3 @@ class SemanticSearch:
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, top_k, filter_dict)
             
         return search_result
-    
-
-search_query = 'Nice homes in Boston'
-semantic_search = SemanticSearch('Boston')
-results = semantic_search.search_for_properties(search_query)
-
-
