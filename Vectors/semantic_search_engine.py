@@ -1,66 +1,15 @@
-import spacy
-import re
 from pinecone_interactor import PineconeInteractor
+from location_parser import LocationParser
+from filter_builder import FilterBuilder
 
 class SemanticSearch:
     
-    def __init__(self, user_city):
-        self.pinecone_interactor = PineconeInteractor('final-database')
-        self.user_city = user_city
-        self.nlp = spacy.load("en_core_web_sm") 
-        self.zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')
+    def __init__(self, pinecone_interactor: PineconeInteractor, location_parser: LocationParser, filter_builder: FilterBuilder, top_k = 100):
+        self.pinecone_interactor = pinecone_interactor
+        self.location_parser = location_parser
+        self.filter_builder = filter_builder
+        self.top_k = top_k
         self.zero_vector = [0.0] * 768
-        
-        #Change 4 to 5 once you fix the issue
-        self.address_pattern = re.compile(
-            r"\d{3,6} [A-Za-z]+(?: [A-Za-z]+)*, [A-Za-z ]+, [A-Z]{2} \d{4}",
-            re.IGNORECASE
-        )
-
-    """
-    Checks to see if text only mentions a location (City or Place)
-
-    Returns a tuple where first value is true if search query only looks for place, second value returns the location value
-    """
-    def check_for_location_only_query(self, stripped_query):                
-        zipcode_match = re.match(self.zipcode_pattern, stripped_query)
-        if zipcode_match != None:
-            return 'zipcode', zipcode_match.group(0)
-
-        address = self.contains_us_address_regex(stripped_query)
-        if address != None:
-            return 'address', address
-        
-        doc = self.nlp(stripped_query)
-        for ent in doc.ents:
-            if ent.label_ == 'GPE':
-                return 'name', ent.text.strip()
-
-        return None, self.user_city
-    
-    def contains_us_address_regex(self, stripped_query):        
-        address_search_pattern = re.search(self.address_pattern, stripped_query)
-        if address_search_pattern != None:
-            return address_search_pattern.group(0)
-        
-        return None
-    
-    def create_filter_dict(self, location_type, location, advanced_filters):
-        filter_dict = None
-        if location_type == 'zipcode':
-            location = float(location)
-            filter_dict = {'zipcode': {'$eq': location}}
-        elif location_type == 'address':
-            filter_dict = {'address': {'$eq': location}}
-        else:
-            filter_dict = {'city': {'$eq': location}}   
-                       
-        if advanced_filters:
-            for key, value in advanced_filters.items():
-                if value is not None:
-                    filter_dict[key] = value
-                    
-        return filter_dict
             
     """
     Searches Pinecone database for k results that best match the given search query
@@ -71,27 +20,22 @@ class SemanticSearch:
     
     Returns the top k results from the given search query
     """
-    def search_for_properties(self, search_query, top_k=100, advanced_filters = None):
+    def search_for_properties(self, search_query, advanced_filters = None):
         stripped_search_query = search_query.strip()
         
         #If search query only has spaces
         if not stripped_search_query:
             return []
-        
-        location_only = False
-        
-        location_type, location = self.check_for_location_only_query(stripped_search_query)
-        if len(location) == len(stripped_search_query):
-            location_only = True
-        
-        filter_dict = self.create_filter_dict(location_type, location, advanced_filters)
+                
+        location_type, location = self.location_parser.check_for_location_only_query(stripped_search_query)
+        location_only = stripped_search_query.lower() in location.lower()
+                
+        filter_dict = self.filter_builder.create_filter_dict(location_type, location, advanced_filters)
         
         if location_only:
-            search_result = self.pinecone_interactor.perform_search(self.zero_vector, top_k, filter_dict)
+            search_result = self.pinecone_interactor.perform_search(self.zero_vector, self.top_k, filter_dict)
         else:
-            search_query_embedding = self.pinecone_interactor.get_text_embedding(stripped_search_query)
-            print(search_query_embedding)
-            print(type(search_query_embedding))
-            search_result = self.pinecone_interactor.perform_search(search_query_embedding, top_k, filter_dict)
+            search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
+            search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, filter_dict)
             
         return search_result

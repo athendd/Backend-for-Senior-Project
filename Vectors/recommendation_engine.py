@@ -2,32 +2,30 @@ from pinecone_interactor import PineconeInteractor
 
 class RecommendationEngine():
     
-    def __init__(self, favorite_properties_ids):
+    def __init__(self, favorite_properties_ids, pinecone_interactor: PineconeInteractor, top_k = 50):
         self.favorite_properties_ids = favorite_properties_ids
-        self.pinecone_interactor = PineconeInteractor('new-example-database')  
+        self.pinecone_interactor = pinecone_interactor
+        self.top_k = top_k
     
-    def get_recommended_properties(self):
+    def recommended_properties(self, filter_dict = None):
         if self.favorite_properties_ids == []:
             return []
-
-        recommendation_list = []
+        
+        seen = set()
+        recommendations_list = []
+        
         for favorite_property_id in self.favorite_properties_ids:
-            recommendations = self.property_recommendations(favorite_property_id)
-            if recommendations != []:
-                recommendation_list = self.check_for_duplicates(recommendation_list, recommendations)
-                            
-        return recommendation_list
+            recommendations = self._property_recommendations(favorite_property_id, filter_dict)
+            for recommendation in recommendations:
+                if recommendation not in seen and recommendation not in self.favorite_properties_ids:
+                    seen.add(recommendation)
+                    recommendations_list.append(recommendation)
+              
+        return recommendations_list
             
-    def property_recommendations(self, favorite_property_id):
+    def _property_recommendations(self, favorite_property_id, filter_dict):
         property_vector = self.pinecone_interactor.get_vector(favorite_property_id)
         if property_vector == None:
             return []
         
-        return self.pinecone_interactor.perform_search(property_vector, 5, None)
-    
-    def check_for_duplicates(self, recommendation_list, recommendations):
-        for recommendation in recommendations:
-            if recommendation not in recommendation_list:
-                recommendation_list.append(recommendation)
-                
-        return recommendation_list            
+        return self.pinecone_interactor.perform_search(property_vector, self.top_k, filter_dict) 
