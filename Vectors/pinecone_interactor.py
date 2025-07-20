@@ -7,7 +7,7 @@ pinecone_api_key = os.environ.get('PINECONE_API_KEY')
 
 class PineconeInteractor:
         
-    def __init__(self, index_name, vector_dimension = 768, similarity_metric = 'cosine'):
+    def __init__(self, index_name, vector_dimension = 384, similarity_metric = 'cosine'):
         self.pc = Pinecone(api_key=pinecone_api_key, environment='example-environment')
         
         if index_name not in [i['name'] for i in self.pc.list_indexes()]:
