@@ -35,8 +35,8 @@ class SemanticSearch:
         else:
             search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, filter_dict)
-            
-        return search_result
+        
+        return self.convert_strs_to_ints(search_result)
     
     @staticmethod
     def create_filter_dict(location_type, location, advanced_filters):
@@ -52,3 +52,11 @@ class SemanticSearch:
         }
 
         return {**location_filter, **clean_advanced_filters}
+    
+    @staticmethod
+    def convert_strs_to_ints(list_strs):
+        int_list = []
+        for s in list_strs:
+            int_list.append(int(s))
+            
+        return int_list   

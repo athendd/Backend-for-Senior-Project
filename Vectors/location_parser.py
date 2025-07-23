@@ -10,9 +10,11 @@ class LocationParser:
         re.IGNORECASE
     )
     
-    def __init__(self, user_city, place_misspeller: PlaceMisspeller):
+    def __init__(self, place_misspeller: PlaceMisspeller, user_city = None):
         self.nlp = spacy.load("en_core_web_sm") 
         self.user_city = user_city
+        if self.user_city == None:
+            self.user_city = 'Boston'
         self.place_misspeller = place_misspeller
 
     def check_for_location_only_query(self, stripped_query):       
