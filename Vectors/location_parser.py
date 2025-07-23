@@ -1,57 +1,35 @@
 import spacy
 import re
-from place_misspeller import PlaceMisspeller
+from misspeller_fixer import MisspellerFixer
 
 class LocationParser:
-    
     zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')
-    address_pattern = re.compile(
-        r"\d{3,6} [A-Za-z]+(?: [A-Za-z]+)*, [A-Za-z ]+, [A-Z]{2} \d{4}",
-        re.IGNORECASE
-    )
-    
-    def __init__(self, place_misspeller: PlaceMisspeller, user_city = None):
-        self.nlp = spacy.load("en_core_web_sm") 
+    address_pattern = re.compile(r"\d{3,6} [A-Za-z]+(?: [A-Za-z]+)*, [A-Za-z ]+, [A-Z]{2} \d{4}", re.IGNORECASE)
+
+    def __init__(self, misspeller_fixer: MisspellerFixer, places=None, user_city='Boston'):
+        self.nlp = spacy.load("en_core_web_sm")
+        self.places = places if places else ['Boston']
         self.user_city = user_city
-        if self.user_city == None:
-            self.user_city = 'Boston'
-        self.place_misspeller = place_misspeller
+        self.misspeller_fixer = misspeller_fixer
 
-    def check_for_location_only_query(self, stripped_query):       
-        if self.is_zipcode(stripped_query):
-            return 'zipcode', stripped_query
+    def check_for_location_only_query(self, search_query):
+        if self.is_zipcode(search_query):
+            return 'zipcode', search_query
 
-        address = self.extract_address(stripped_query)
+        address = self.extract_address(search_query)
         if address:
             return 'address', address
-        
-        corrected_query = self._correct_possible_places(stripped_query)
+
+        corrected_query = self.misspeller_fixer.correct_text(search_query)
         doc = self.nlp(corrected_query)
 
         for ent in doc.ents:
             if ent.label_ == 'GPE':
-                place_name = ent.text.strip()
-                if self.place_misspeller.place_exists(place_name):
-                    return 'name', place_name
+                place = ent.text.strip()
+                if place in self.places:
+                    return 'city', place
 
         return None, self.user_city
-
-    def _correct_possible_places(self, text):
-        candidates = self.place_misspeller.get_place_candidates(text)
-        corrected_text = text
-        for candidate in sorted(candidates, key=len, reverse=True):  
-            corrected = self.place_misspeller.correct_place(candidate)
-            if corrected != None:
-                corrected_text = corrected_text.replace(self.place_misspeller.capitalize_name(candidate), corrected)
-                break               
-        
-        return corrected_text
-
-    def check_place(self, place):
-        if place in self.places:
-            return True
-        
-        return False
 
     @staticmethod
     def is_zipcode(text):
