@@ -37,6 +37,7 @@ class SemanticSearch:
             search_result = self.pinecone_interactor.perform_search(self.zero_vector, self.top_k, filter_dict)
         else:
             updated_filter_dict = self.search_analyzer.update_filters_dict(search_query, filter_dict, location)
+            print(updated_filter_dict)
             search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, updated_filter_dict)
         
@@ -69,7 +70,7 @@ class SemanticSearch:
 advanced_filters = {
         'property_type': None,
         'neighborhood_type': None,
-        'num_beds': 4,
+        'num_beds': None,
         'num_baths': None,
         'move_in_date': None,
         'lease_term': None,
@@ -92,4 +93,4 @@ advanced_filters = {
         'yard': None,
         'recently_renovated': None,
         'average_rating': None
-} 
+}
