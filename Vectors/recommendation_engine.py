@@ -2,20 +2,30 @@ from pinecone_interactor import PineconeInteractor
 
 class RecommendationEngine():
     
-    def __init__(self, favorite_properties_ids, pinecone_interactor: PineconeInteractor, top_k = 50):
-        self.favorite_properties_ids = favorite_properties_ids
+    def __init__(self, pinecone_interactor: PineconeInteractor, top_k = 5):
         self.pinecone_interactor = pinecone_interactor
         self.top_k = top_k
+        
+    def recommendation_pipeline(self, user_dict):
+        user_recommendations_dict = {}
+        for user in user_dict.keys():
+            if len(user_dict[user]) >= 3:
+                mysql_ids, places = user_dict[user]
+                user_recommendations_dict[user] = self.recommended_properties(mysql_ids, places)
+            else:
+                user_recommendations_dict[user] = []
+            
     
-    def recommended_properties(self, filter_dict = None):
-        if self.favorite_properties_ids == []:
+    def recommended_properties(self, favorite_properties_ids, places):
+        if favorite_properties_ids == []:
             return []
         
         seen = set()
         recommendations_list = []
         
-        for favorite_property_id in self.favorite_properties_ids:
-            recommendations = self._property_recommendations(favorite_property_id, filter_dict)
+        for i in range(len(favorite_properties_ids)):
+            filter_dict = {'city': places[i]}
+            recommendations = self._property_recommendations(favorite_properties_ids[i], filter_dict)
             for recommendation in recommendations:
                 if recommendation not in seen and recommendation not in self.favorite_properties_ids:
                     seen.add(recommendation)
