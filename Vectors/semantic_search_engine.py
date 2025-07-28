@@ -1,6 +1,5 @@
 from pinecone_interactor import PineconeInteractor
 from location_parser import LocationParser
-from misspeller_fixer import MisspellerFixer
 from search_analyzer import SearchAnalyzer
 
 class SemanticSearch:
@@ -50,7 +49,7 @@ class SemanticSearch:
             updated['zipcode'] = int(location)
         elif location_type == 'address':
             updated['address'] = location
-        elif location_type == 'city':
+        else:
             updated['city'] = location
 
         for k, v in advanced_filters.items():
@@ -77,8 +76,13 @@ advanced_filters = {
         'monthly_rent': None,
         'square_footage': None,
         'year_built': None,
-        'min_age': None,
-        'max_age': None,
+        'min_age': {
+            '$lte': 32
+        },
+        'max_age':
+            {
+                '$gte': 21
+            },
         'pet_policy': None,
         'utilities_included':None,
         'washer': None,

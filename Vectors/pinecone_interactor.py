@@ -49,8 +49,8 @@ class PineconeInteractor:
     Creates the embedding and metadata dictionary for the given property dic and then uploads them to the chosen Pinecone index
     
     Args:
-        -mysql_id (int): MySQL id for the given property
-        -property_dic (dic): Dictionary containing all relevant information on a property
+        -mysql_id (str): MySQL id for the given property
+        -property_dic (dict): Dictionary containing all relevant information on a property
     """
     def upload_vector(self, mysql_id, property_dic):
         property_vector = self.property_vector_builder.build(property_dic)
@@ -94,8 +94,6 @@ class PineconeInteractor:
         'address': property_dic['address'],
         'city': property_dic['city'],
         'zipcode': property_dic['zipcode'],
-        'latitude': property_dic['latitude'],
-        'longitude': property_dic['longitude'],
         'num_beds': property_dic['number_of_beds'],
         'num_baths': property_dic['number_of_baths'],
         'move_in_date': property_dic['move_in_date'],
@@ -103,8 +101,8 @@ class PineconeInteractor:
         'monthly_rent': property_dic['monthly_rent'],
         'square_footage': property_dic['square_footage'],
         'year_built': property_dic['year_built'],
-        'min_age': property_dic['min_age'],
-        'max_age': property_dic['max_age'],
+        'max_age': property_dic['min_age'],
+        'min_age': property_dic['max_age'],
         'pet_policy': property_dic['pet_policy'],
         'utilities_included': property_dic['utilities_included'],
         'washer': property_dic['washer'],

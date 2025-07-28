@@ -30,9 +30,12 @@ class SearchAnalyzer:
                         if field in words_to_check:
                             advanced_filters[field] = True
                         elif field in words_to_select:
-                            advanced_filters[field] = words[i].capitalize()
+                            if words[i].endswith('s'):
+                                advanced_filters[field] = words[i][:-1].capitalize()
+                            else:
+                                advanced_filters[field] = words[i].capitalize()
                         else:
                             if i > 0 and words[i - 1].isdigit():
-                                advanced_filters[field] = int(words[i - 1])
+                                advanced_filters[field] = {'$gte': int(words[i - 1])}
 
         return advanced_filters
