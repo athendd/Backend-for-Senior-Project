@@ -18,7 +18,7 @@ class SemanticSearch:
         -top_k (int): Number of search results to return
         -advanced_filters (dic): Dictionary of the chosen advanced filtering feature
     
-    Returns the top k results from the given search query
+    Returns the top k results from the given search query and the updated advanced filters dictionary
     """
     def search_for_properties(self, search_query, advanced_filters = None):
         stripped_search_query = search_query.strip()
@@ -36,11 +36,10 @@ class SemanticSearch:
             search_result = self.pinecone_interactor.perform_search(self.zero_vector, self.top_k, filter_dict)
         else:
             updated_filter_dict = self.search_analyzer.update_filters_dict(search_query, filter_dict, location)
-            print(updated_filter_dict)
             search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, updated_filter_dict)
         
-        return self.convert_strs_to_ints(search_result)
+        return self.convert_strs_to_ints(search_result), filter_dict
     
     @staticmethod
     def create_filter_dict(location_type, location, advanced_filters):
@@ -66,6 +65,7 @@ class SemanticSearch:
             
         return int_list   
     
+""" 
 advanced_filters = {
         'property_type': None,
         'neighborhood_type': None,
@@ -98,3 +98,4 @@ advanced_filters = {
         'recently_renovated': None,
         'average_rating': None
 }
+"""
