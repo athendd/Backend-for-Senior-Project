@@ -1,6 +1,6 @@
 import spacy
 import re
-from misspeller_fixer import MisspellerFixer
+from .misspeller_fixer import MisspellerFixer
 
 class LocationParser:
     zipcode_pattern = re.compile(r'\d{5}(?:-\d{4})?$')

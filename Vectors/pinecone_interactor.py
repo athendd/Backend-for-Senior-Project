@@ -1,7 +1,7 @@
 import os
 from pinecone import Pinecone, ServerlessSpec
-from embedder import Embedder
-from vector_builder import PropertyVectorBuilder
+from .embedder import Embedder
+from .vector_builder import PropertyVectorBuilder
 
 pinecone_api_key = os.environ.get('PINECONE_API_KEY')
 

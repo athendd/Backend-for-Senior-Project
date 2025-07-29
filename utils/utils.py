@@ -1,5 +1,4 @@
 from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import math
 import re
 import pgeocode
@@ -20,40 +19,16 @@ def get_coordinates_from_address(address):
         return None, None
     
 """
-Retrieves the zip code for a given place name using Nominatim.
-
-Args:
-    place_name (str): The name of the place.
-Returns:
-    str or None: The zip code of the place, or None if not found or an error occurs.
-"""    
-def get_zipcode_from_place(place_name):
-    geolocator = Nominatim(user_agent='lease_link') 
-    try:
-        location = geolocator.geocode(place_name, addressdetails=True, exactly_one=True)
-        if location and 'address' in location.raw and 'postcode' in location.raw['address']:
-            return int(location.raw['address']['postcode'])
-        else:
-            return None
-    except (GeocoderTimedOut, GeocoderServiceError) as e:
-        print(f"Geocoding error: {e}")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
-    
-"""
 Gets a place name from a given zipcode
 """
 def get_city_from_zipcode(zip_code, country_code='US'):
     nomi = pgeocode.Nominatim(country_code)
     location_data = nomi.query_postal_code(zip_code)
-
-    if not location_data.empty and location_data['place_name'].iloc[0] is not None:
-        return location_data['place_name'].iloc[0]
+    
+    if not location_data.empty and location_data['place_name'] is not None:
+        return location_data['place_name']
     else:
         return None
-    
     
 """
 Gets city and zipcode from a given address
