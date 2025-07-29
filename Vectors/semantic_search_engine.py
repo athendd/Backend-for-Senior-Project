@@ -1,6 +1,7 @@
 from pinecone_interactor import PineconeInteractor
 from location_parser import LocationParser
 from search_analyzer import SearchAnalyzer
+from utils.utils import get_city_from_zipcode, get_zipcode_from_place, get_city_zip_from_address
 
 class SemanticSearch:
     
@@ -10,6 +11,7 @@ class SemanticSearch:
         self.search_analyzer = search_analyzer
         self.top_k = top_k
         self.zero_vector = [0.0] * 384
+        self.advanced_filters = None
             
     """
     Searches Pinecone database for k results that best match the given search query
@@ -21,6 +23,8 @@ class SemanticSearch:
     Returns the top k results from the given search query and the updated advanced filters dictionary
     """
     def search_for_properties(self, search_query, advanced_filters = None):
+        self.advanced_filters = advanced_filters
+        
         stripped_search_query = search_query.strip()
         
         #If search query only has spaces
@@ -30,32 +34,34 @@ class SemanticSearch:
         location_type, location = self.location_parser.check_for_location_only_query(stripped_search_query)
         location_only = stripped_search_query.lower() in location.lower()
                 
-        filter_dict = self.create_filter_dict(location_type, location, advanced_filters)
+        self.create_filter_dict(location_type, location)
+        
+        print(self.advanced_filters)
         
         if location_only:
-            search_result = self.pinecone_interactor.perform_search(self.zero_vector, self.top_k, filter_dict)
+            search_result = self.pinecone_interactor.perform_search(self.zero_vector, self.top_k, self.advanced_filters)
         else:
-            updated_filter_dict = self.search_analyzer.update_filters_dict(search_query, filter_dict, location)
+            self.advanced_filters = self.search_analyzer.update_filters_dict(search_query, self.advanced_filters, location)
             search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
-            search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, updated_filter_dict)
+            search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, self.advanced_filters)
         
-        return self.convert_strs_to_ints(search_result), filter_dict
+        return self.convert_strs_to_ints(search_result), self.advanced_filters
     
-    @staticmethod
-    def create_filter_dict(location_type, location, advanced_filters):
-        updated = {}
+    def create_filter_dict(self, location_type, location):
         if location_type == 'zipcode':
-            updated['zipcode'] = int(location)
+            self.advanced_filters['zipcode'] = int(location)
+            self.advanced_filters['city'] = get_city_from_zipcode(location)
         elif location_type == 'address':
-            updated['address'] = location
+            self.advanced_filters['address'] = location
+            city, zipcode = get_city_zip_from_address(location)
+            self.advanced_filters['city'] = city
+            self.advanced_filters['zipcode'] = int(zipcode)
         else:
-            updated['city'] = location
-
-        for k, v in advanced_filters.items():
-            if v is not None:
-                updated[k] = v
-
-        return updated
+            self.advanced_filters['city'] = location
+            self.advanced_filters['zipcode'] = get_zipcode_from_place(location)
+            
+    def get_filters_dict(self):
+        return self.advanced_filters
     
     @staticmethod
     def convert_strs_to_ints(list_strs):
@@ -99,3 +105,9 @@ advanced_filters = {
         'average_rating': None
 }
 """
+search_query = '02043'
+pinecone_interactor = PineconeInteractor('example-database')
+location_parser = LocationParser()
+search_analyzer = SearchAnalyzer()
+semantic_search = SemanticSearch(pinecone_interactor, location_parser, search_analyzer)
+semantic_search.search_for_properties(search_query)

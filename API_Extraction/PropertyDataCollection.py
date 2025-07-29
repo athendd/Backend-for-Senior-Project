@@ -1,4 +1,4 @@
-from utils import get_coordinates_from_address, get_city_zip_from_address
+from utils.utils import get_coordinates_from_address, get_city_zip_from_address
 import os
 from PlacesAPIExtractor import PlacesAPIExtractor
 

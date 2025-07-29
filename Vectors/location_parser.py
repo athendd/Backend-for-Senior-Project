@@ -13,8 +13,9 @@ class LocationParser:
         self.misspeller_fixer = MisspellerFixer(self.places)
 
     def check_for_location_only_query(self, search_query):
-        if self.is_zipcode(search_query):
-            return 'zipcode', search_query
+        zipcode = self.extract_zipcode(search_query)
+        if zipcode:
+            return 'zipcode', zipcode
 
         address = self.extract_address(search_query)
         if address:
@@ -33,9 +34,10 @@ class LocationParser:
         return None, self.user_city
 
     @staticmethod
-    def is_zipcode(text):
-        return bool(LocationParser.zipcode_pattern.fullmatch(text.strip()))
-
+    def extract_zipcode(text):
+        match = LocationParser.zipcode_pattern.fullmatch(text.strip())
+        return match.group() if match else None
+    
     @staticmethod
     def extract_address(text):
         match = LocationParser.address_pattern.search(text)
