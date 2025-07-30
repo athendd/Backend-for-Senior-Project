@@ -14,7 +14,8 @@ class RecommendationEngine():
                 user_recommendations_dict[user] = self.recommended_properties(mysql_ids, places)
             else:
                 user_recommendations_dict[user] = []
-            
+                
+        return user_recommendations_dict
     
     def recommended_properties(self, favorite_properties_ids, places):
         if favorite_properties_ids == []:

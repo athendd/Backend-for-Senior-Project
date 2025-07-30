@@ -12,6 +12,7 @@ class SemanticSearch:
         self.search_analyzer = search_analyzer
         self.top_k = top_k
         self.zero_vector = [0.0] * 384
+        self.advanced_filters = {}
             
     """
     Searches Pinecone database for k results that best match the given search query
