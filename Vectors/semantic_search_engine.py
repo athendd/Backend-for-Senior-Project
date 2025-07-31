@@ -46,7 +46,7 @@ class SemanticSearch:
             search_query_embedding = self.pinecone_interactor.embedder.encode(stripped_search_query)
             search_result = self.pinecone_interactor.perform_search(search_query_embedding, self.top_k, self.advanced_filters)
         
-        return self.convert_strs_to_ints(search_result), self.advanced_filters
+        return self.convert_strs_to_ints(search_result)
     
     def create_filter_dict(self, location_type, location):
         if location_type == 'zipcode':
